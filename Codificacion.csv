@@ -1,0 +1,159 @@
+﻿archivo,linea,codigo
+ConexionTester.java,1,import java.awt.*;
+ConexionTester.java,2,import java.sql.SQLException;
+ConexionTester.java,3,import java.util.Arrays;
+ConexionTester.java,4,import java.util.concurrent.ExecutionException;
+ConexionTester.java,5,import javax.swing.*;
+ConexionTester.java,6,
+ConexionTester.java,7,public class ConexionTester extends JPanel {
+ConexionTester.java,8,    // Guardo los campos como atributos para poder leerlos cuando el usuario pulse el botón.
+ConexionTester.java,9,"    private final JTextField campoUrl = new JTextField(""jdbc:sqlite:inventario.db"");"
+ConexionTester.java,10,    private final JTextField campoUsuario = new JTextField();
+ConexionTester.java,11,    private final JPasswordField campoClave = new JPasswordField();
+ConexionTester.java,12,"    private final JButton boton = new JButton(""Probar conexión"");"
+ConexionTester.java,13,"    private final JTextArea resultado = new JTextArea(5, 50);"
+ConexionTester.java,14,    private final PruebaJdbc prueba = new PruebaJdbc();
+ConexionTester.java,15,
+ConexionTester.java,16,    public ConexionTester() {
+ConexionTester.java,17,"        super(new BorderLayout(10, 12));"
+ConexionTester.java,18,"        setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));"
+ConexionTester.java,19,"        add(new JLabel(""Configuración de la base de datos""), BorderLayout.NORTH);"
+ConexionTester.java,20,
+ConexionTester.java,21,        // Uso dos columnas para que cada etiqueta quede alineada con su campo.
+ConexionTester.java,22,"        JPanel nombres = new JPanel(new GridLayout(3, 1, 0, 6));"
+ConexionTester.java,23,"        JPanel campos = new JPanel(new GridLayout(3, 1, 0, 6));"
+ConexionTester.java,24,"        agregarCampo(""URL JDBC"", campoUrl, nombres, campos);"
+ConexionTester.java,25,"        agregarCampo(""Usuario"", campoUsuario, nombres, campos);"
+ConexionTester.java,26,"        agregarCampo(""Contraseña"", campoClave, nombres, campos);"
+ConexionTester.java,27,"        JPanel formulario = new JPanel(new BorderLayout(12, 8));"
+ConexionTester.java,28,"        formulario.add(nombres, BorderLayout.WEST);"
+ConexionTester.java,29,"        formulario.add(campos, BorderLayout.CENTER);"
+ConexionTester.java,30,"        formulario.add(new JLabel(""SQLite permite dejar usuario y contraseña vacíos.""),"
+ConexionTester.java,31,                BorderLayout.SOUTH);
+ConexionTester.java,32,"        add(formulario, BorderLayout.CENTER);"
+ConexionTester.java,33,
+ConexionTester.java,34,"        JPanel salida = new JPanel(new BorderLayout(0, 8));"
+ConexionTester.java,35,"        JPanel acciones = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));"
+ConexionTester.java,36,        acciones.add(boton);
+ConexionTester.java,37,"        salida.add(acciones, BorderLayout.NORTH);"
+ConexionTester.java,38,        // Dejo el resultado en modo de lectura y agrego desplazamiento para los errores largos.
+ConexionTester.java,39,        resultado.setEditable(false);
+ConexionTester.java,40,        resultado.setLineWrap(true);
+ConexionTester.java,41,        resultado.setWrapStyleWord(true);
+ConexionTester.java,42,        JScrollPane scroll = new JScrollPane(resultado);
+ConexionTester.java,43,"        scroll.setBorder(BorderFactory.createTitledBorder(""Resultado de la prueba""));"
+ConexionTester.java,44,"        salida.add(scroll, BorderLayout.CENTER);"
+ConexionTester.java,45,"        add(salida, BorderLayout.SOUTH);"
+ConexionTester.java,46,
+ConexionTester.java,47,"        // Al pulsar el botón, se revisan los datos y comienza la prueba de conexión."
+ConexionTester.java,48,        boton.addActionListener(evento -> probarConexion());
+ConexionTester.java,49,
+ConexionTester.java,50,    }
+ConexionTester.java,51,
+ConexionTester.java,52,    // Uso el mismo método para agregar cada etiqueta junto con su campo.
+ConexionTester.java,53,"    private void agregarCampo(String nombre, JTextField campo,"
+ConexionTester.java,54,"                              JPanel nombres, JPanel campos) {"
+ConexionTester.java,55,        JLabel etiqueta = new JLabel(nombre);
+ConexionTester.java,56,        etiqueta.setLabelFor(campo);
+ConexionTester.java,57,        nombres.add(etiqueta);
+ConexionTester.java,58,        campos.add(campo);
+ConexionTester.java,59,    }
+ConexionTester.java,60,
+ConexionTester.java,61,    // Muestro todos los resultados en la misma área y cambio el color según lo que ocurrió.
+ConexionTester.java,62,"    private void mostrar(String mensaje, Color color) {"
+ConexionTester.java,63,        resultado.setForeground(color);
+ConexionTester.java,64,        resultado.setText(mensaje);
+ConexionTester.java,65,        resultado.setCaretPosition(0);
+ConexionTester.java,66,    }
+ConexionTester.java,67,
+ConexionTester.java,68,    private void probarConexion() {
+ConexionTester.java,69,        // Quito los espacios de los extremos y compruebo que haya una dirección antes de conectar.
+ConexionTester.java,70,        String url = campoUrl.getText().trim();
+ConexionTester.java,71,        if (url.isEmpty()) {
+ConexionTester.java,72,"            mostrar(""Escribe la URL JDBC antes de probar la conexión."", Color.RED.darker());"
+ConexionTester.java,73,            campoUrl.requestFocusInWindow();
+ConexionTester.java,74,            return;
+ConexionTester.java,75,        }
+ConexionTester.java,76,        String usuario = campoUsuario.getText();
+ConexionTester.java,77,        char[] clave = campoClave.getPassword();
+ConexionTester.java,78,        // Desactivo el botón para evitar que otro clic inicie una segunda prueba mientras esta sigue en curso.
+ConexionTester.java,79,        boton.setEnabled(false);
+ConexionTester.java,80,"        mostrar(""Probando conexión…"", Color.DARK_GRAY);"
+ConexionTester.java,81,
+ConexionTester.java,82,        // Abro la conexión en segundo plano para que la ventana siga respondiendo durante la prueba.
+ConexionTester.java,83,"        new SwingWorker<String, Void>() {"
+ConexionTester.java,84,            protected String doInBackground() throws Exception {
+ConexionTester.java,85,                try {
+ConexionTester.java,86,"                    return prueba.conectar(url, usuario, new String(clave));"
+ConexionTester.java,87,                } finally {
+ConexionTester.java,88,"                    // Al terminar el intento, borro los caracteres del arreglo que usé para leer la contraseña."
+ConexionTester.java,89,"                    Arrays.fill(clave, '\0');"
+ConexionTester.java,90,                }
+ConexionTester.java,91,            }
+ConexionTester.java,92,
+ConexionTester.java,93,"            // Cuando termina la tarea, muestro el resultado y vuelvo a habilitar el botón."
+ConexionTester.java,94,            protected void done() {
+ConexionTester.java,95,                try {
+ConexionTester.java,96,"                    mostrar(get(), new Color(20, 110, 55));"
+ConexionTester.java,97,                } catch (ExecutionException error) {
+ConexionTester.java,98,                    // Recupero la causa original para saber si faltó el controlador o si falló la conexión.
+ConexionTester.java,99,                    mostrarError(error.getCause());
+ConexionTester.java,100,                } catch (InterruptedException error) {
+ConexionTester.java,101,                    Thread.currentThread().interrupt();
+ConexionTester.java,102,"                    mostrar(""La prueba se interrumpió."", Color.RED.darker());"
+ConexionTester.java,103,                } finally {
+ConexionTester.java,104,                    boton.setEnabled(true);
+ConexionTester.java,105,                }
+ConexionTester.java,106,            }
+ConexionTester.java,107,        }.execute();
+ConexionTester.java,108,    }
+ConexionTester.java,109,
+ConexionTester.java,110,    private void mostrarError(Throwable causa) {
+ConexionTester.java,111,        String mensaje;
+ConexionTester.java,112,        if (causa instanceof ClassNotFoundException) {
+ConexionTester.java,113,"            mensaje = ""Falta el controlador JDBC. Revisa la carpeta lib."";"
+ConexionTester.java,114,        } else if (causa instanceof SQLException) {
+ConexionTester.java,115,"            mensaje = ""Fallo de conexión. Revisa la URL y los datos de acceso."";"
+ConexionTester.java,116,        } else {
+ConexionTester.java,117,"            mensaje = ""La prueba terminó con un error inesperado."";"
+ConexionTester.java,118,        }
+ConexionTester.java,119,        // Debajo del aviso agrego el detalle técnico para que se pueda identificar el problema.
+ConexionTester.java,120,"        mostrar(mensaje + ""\nDetalle: "" + causa.getMessage(), Color.RED.darker());"
+ConexionTester.java,121,    }
+ConexionTester.java,122,
+ConexionTester.java,123,    public static void main(String[] args) {
+ConexionTester.java,124,        // Creo la ventana en el hilo que usa Swing para mostrar y actualizar sus componentes.
+ConexionTester.java,125,        SwingUtilities.invokeLater(() -> {
+ConexionTester.java,126,            ConexionTester panel = new ConexionTester();
+ConexionTester.java,127,"            JFrame ventana = new JFrame(""Prueba de conexión JDBC"");"
+ConexionTester.java,128,            ventana.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+ConexionTester.java,129,            ventana.setContentPane(panel);
+ConexionTester.java,130,            ventana.getRootPane().setDefaultButton(panel.boton);
+ConexionTester.java,131,            ventana.pack();
+ConexionTester.java,132,            ventana.setMinimumSize(ventana.getSize());
+ConexionTester.java,133,            ventana.setLocationRelativeTo(null);
+ConexionTester.java,134,            ventana.setVisible(true);
+ConexionTester.java,135,        });
+ConexionTester.java,136,    }
+ConexionTester.java,137,}
+PruebaJdbc.java,1,import java.sql.Connection;
+PruebaJdbc.java,2,import java.sql.DriverManager;
+PruebaJdbc.java,3,import java.sql.SQLException;
+PruebaJdbc.java,4,
+PruebaJdbc.java,5,public class PruebaJdbc {
+PruebaJdbc.java,6,"    public String conectar(String url, String usuario, String clave)"
+PruebaJdbc.java,7,"            throws ClassNotFoundException, SQLException {"
+PruebaJdbc.java,8,"        // Si la dirección es de SQLite, intento cargar su controlador antes de abrir la base."
+PruebaJdbc.java,9,"        if (url.startsWith(""jdbc:sqlite:"")) {"
+PruebaJdbc.java,10,"            Class.forName(""org.sqlite.JDBC"");"
+PruebaJdbc.java,11,        }
+PruebaJdbc.java,12,
+PruebaJdbc.java,13,"        // Abro la conexión con los datos recibidos. Al salir de este bloque, Java la cierra automáticamente."
+PruebaJdbc.java,14,        try (Connection conexion =
+PruebaJdbc.java,15,"                DriverManager.getConnection(url, usuario, clave)) {"
+PruebaJdbc.java,16,            // Leo el nombre del motor desde la conexión abierta para mostrar qué motor respondió.
+PruebaJdbc.java,17,            String motor = conexion.getMetaData().getDatabaseProductName();
+PruebaJdbc.java,18,"            return ""Conexión exitosa.\nMotor de base de datos: "" + motor;"
+PruebaJdbc.java,19,        }
+PruebaJdbc.java,20,    }
+PruebaJdbc.java,21,}
